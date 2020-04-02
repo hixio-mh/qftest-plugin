@@ -181,6 +181,9 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 		FilePath htmldir = logdir.child("html");
 		htmldir.mkdirs();
 
+		FilePath junitdir = logdir.child("junit");
+		junitdir.mkdirs();
+
 		FilePath qrzdir = logdir.child("qrz");
 		qrzdir.mkdirs();
 
@@ -319,7 +322,7 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 
 			RunLogs rl = new RunLogs(
 					new ArgumentListBuilder(
-							"-report.html", htmldir.getRemote()
+							"-report.html", htmldir.getRemote(), "-report.junit", junitdir.getRemote()
 					).toStringWithQuote()
 			);
 

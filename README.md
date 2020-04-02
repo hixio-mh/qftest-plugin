@@ -91,6 +91,7 @@ Using a well defined runlog directory is needed to identify the produced run log
 The general structure is as follows:<br/>
 * `<reportDirectory>/qrz`: QF-Test run logs. They are automatically attached to the current Jenkins build.
 * `<reportDirectory>/html`: QF-Test html report. Internally, its processed further by the Jenkins `publishHTML` plugin.
+* `<reportDirectory>/junit`: QF-Test junit report. Can be processed further by the Jenkins `junit` plugin.
 
 
 ## The QF-Test build step
