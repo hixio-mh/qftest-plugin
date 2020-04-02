@@ -168,6 +168,8 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 	@Override
 	public void perform(@Nonnull Run<?, ?> run, @Nonnull FilePath workspace, @Nonnull Launcher launcher, @Nonnull TaskListener listener) throws InterruptedException, IOException {
 
+		reducedQFTReturnValue = null;
+
 		EnvVars env = run.getEnvironment(listener);
 
 		FilePath logdir = workspace.child(getReportDirectory());
