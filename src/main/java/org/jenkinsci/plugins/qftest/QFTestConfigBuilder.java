@@ -528,12 +528,12 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 		}
 
 
-		private ListBoxModel fillOnTestResult(Result defaultSelect) {
+		static private ListBoxModel fillOnTestResult(Result preSelect) {
 			ListBoxModel items = new ListBoxModel();
 			Stream.of(Result.SUCCESS, Result.UNSTABLE, Result.FAILURE, Result.ABORTED, Result.NOT_BUILT)
 					.forEach(res -> {
 						items.add(res.toString());
-						if (defaultSelect == res) { //mark this as selection
+						if (preSelect == res) { //mark this as selection
 							items.get(items.size()-1).selected = true;
 						}
 					});
@@ -542,20 +542,20 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 		}
 
 
-		public ListBoxModel doFillOnTestWarningItems() {
-			return fillOnTestResult(defaultTestWarning);
+		public ListBoxModel doFillOnTestWarningItems(@QueryParameter("onTestWarning") String preset) {
+			return fillOnTestResult(Result.fromString(preset));
 		}
 
-		public ListBoxModel doFillOnTestErrorItems() {
-			return fillOnTestResult(defaultTestError);
+		public ListBoxModel doFillOnTestErrorItems(@QueryParameter("onTestError") String preset) {
+			return fillOnTestResult(Result.fromString(preset));
 		}
 
-		public ListBoxModel doFillOnTestExceptionItems() {
-			return fillOnTestResult(defaultTestException);
+		public ListBoxModel doFillOnTestExceptionItems(@QueryParameter("onTestException") String preset) {
+			return fillOnTestResult(Result.fromString(preset));
 		}
 
-		public ListBoxModel doFillOnTestFailureItems() {
-			return fillOnTestResult(defaultTestFailure);
+		public ListBoxModel doFillOnTestFailureItems(@QueryParameter("onTestFailure") String preset) {
+			return fillOnTestResult(Result.fromString(preset));
 		}
 	}
 }
