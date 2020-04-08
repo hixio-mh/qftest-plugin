@@ -172,8 +172,7 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 
 		EnvVars env = run.getEnvironment(listener);
 
-		FilePath logdir = workspace.child(getReportDirectory());
-
+		FilePath logdir = workspace.child(env.expand(getReportDirectory()));
 		listener.getLogger().println("(Creating and/or clearing " + logdir.getName() + " directory");
 		logdir.mkdirs();
 		logdir.deleteContents();
@@ -205,6 +204,8 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 					path = "qftestc.exe";
 				}
 			}
+
+			path = env.expand(path);
 
 			QFTestCommandLineBuilder command = new QFTestCommandLineBuilder(path, aMode);
 			command.presetArg(QFTestCommandLineBuilder.PresetType.ENFORCE, "-batch");
