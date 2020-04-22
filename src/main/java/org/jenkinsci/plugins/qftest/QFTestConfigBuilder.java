@@ -329,7 +329,6 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 			int nReports = args.addSuiteConfig(qrzdir, rl);
 			if (nReports > 0) {
 				startQFTestProc.apply(args).join();
-				htmldir.child("report.html").renameTo(htmldir.child("index.html"));
 			} else {
 				listener.getLogger().println("No reports found. Marking run with `test failure'");
 				run.setResult(onTestFailure);
@@ -342,7 +341,7 @@ public class QFTestConfigBuilder extends Builder implements SimpleBuildStep
 		//Publish HTML report
 		HtmlPublisher.publishReports(
 				run, workspace, listener, Collections.singletonList(new HtmlPublisherTarget(
-						"QF-Test Report", htmldir.getRemote(), "index.html", true, false, false
+						"QF-Test Report", htmldir.getRemote(), "report.html", true, false, false
 				)), this.getClass()
 		);
 	}
