@@ -1,7 +1,11 @@
 package org.jenkinsci.plugins.qftest;
 
 import hudson.FilePath;
+import hudson.Launcher;
+import jenkins.model.Jenkins;
 
+import javax.annotation.CheckForNull;
+import javax.annotation.Nullable;
 import java.io.IOException;
 import java.util.*;
 import java.util.stream.Collectors;
@@ -51,4 +55,30 @@ public class QFTestCommandLineBuilder extends ExtendedArgumentListBuilder {
         this.add(suites);
         return suites.size();
     }
+
+    static public QFTestCommandLineBuilder newCommandLine(@Nullable String path, final boolean isUnix, final RunMode aMode) {
+
+       //first choice: given path
+        ;
+
+        //next: try global config managed by builder descriptor
+        if (path == null) {
+            //TODO: Test this
+            //TODO: Instead of exceptions: skip this step
+            QFTestConfigBuilder.DescriptorImpl theDescriptor = Jenkins.get().getDescriptorByType(QFTestConfigBuilder.DescriptorImpl.class);
+            assert(theDescriptor != null);
+
+            path = isUnix ? theDescriptor.getQfPathUnix() : theDescriptor.getQfPath();
+        }
+
+        //next: rely on PATH variable
+        if (path == null) {
+            path = isUnix ? "qftest" : "qftestc.exe";
+        }
+
+        QFTestCommandLineBuilder command = new QFTestCommandLineBuilder(path, aMode);
+        command.presetArg(QFTestCommandLineBuilder.PresetType.ENFORCE, "-batch");
+
+        return command;
+    };
 }

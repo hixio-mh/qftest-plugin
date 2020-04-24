@@ -40,6 +40,7 @@ import static com.pivovarit.function.ThrowingSupplier.unchecked;
 
 import java.io.File;
 import java.io.IOException;
+import java.io.Serializable;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -53,7 +54,7 @@ import java.util.regex.Pattern;
  *
  * @author QFS, Sebastian Kleber
  */
-public class Suites extends AbstractDescribableImpl<Suites> {
+public class Suites extends AbstractDescribableImpl<Suites> implements Serializable {
 
 	private final String suitename;
 	private final String customParam;
