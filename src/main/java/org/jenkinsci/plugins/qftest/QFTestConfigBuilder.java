@@ -55,15 +55,6 @@ import javax.annotation.Nonnull;
 
 import htmlpublisher.HtmlPublisher;
 
-/**
- *
- * This class saves all the configurations made by the user and executes a
- * script created by the ScriptCreator Class when a build is performed
- *
- * @author QFS, Sebastian Kleber
- * @author QFS, Philipp Mahlberg
- */
-
 @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
 	value="UUF_UNUSED_FIELD",
         justification="Need unused transient values for backward compatibility"
@@ -309,7 +300,7 @@ public class QFTestConfigBuilder extends Builder implements QFTestParamProvider
 		}
 
 
-		static private ListBoxModel fillOnTestResult(Result preSelect) {
+		static public ListBoxModel fillOnTestResult(Result preSelect) {
 			ListBoxModel items = new ListBoxModel();
 			Stream.of(Result.SUCCESS, Result.UNSTABLE, Result.FAILURE, Result.ABORTED, Result.NOT_BUILT)
 					.forEach(res -> {

@@ -7,11 +7,11 @@ import org.junit.jupiter.api.Test;
 class CommandLineTests {
 
     String binary = new String("qftest");
-    QFTestCommandLineBuilder builder;
+    QFTestCommandLine builder;
 
     @BeforeEach
     public void initBuilder() {
-        builder = new QFTestCommandLineBuilder("qftest", QFTestCommandLineBuilder.RunMode.RUN);
+        builder = new QFTestCommandLine("qftest", QFTestCommandLine.RunMode.RUN);
     }
 
     @Test

@@ -4,27 +4,18 @@ import com.pivovarit.function.ThrowingFunction;
 import htmlpublisher.HtmlPublisher;
 import htmlpublisher.HtmlPublisherTarget;
 import hudson.*;
-import hudson.model.Descriptor;
-import hudson.model.Result;
-import hudson.model.Run;
-import hudson.model.TaskListener;
+import hudson.model.*;
 import hudson.util.ArgumentListBuilder;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
-import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.DataBoundSetter;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
-import java.io.File;
 import java.io.IOException;
-import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
-import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -75,7 +66,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
         {
 
 
-            FilePath logdir = workspace.child(qftParams.getReportDirectory());
+            FilePath logdir = workspace.child(env.expand(qftParams.getReportDirectory()));
 
             listener.getLogger().println("(Creating and/or clearing " + logdir.getName() + " directory");
             logdir.mkdirs();
@@ -90,26 +81,27 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
             FilePath qrzdir = logdir.child("qrz");
             qrzdir.mkdirs();
 
-            ThrowingFunction<QFTestCommandLineBuilder, Proc, ?> startQFTestProc = (QFTestCommandLineBuilder args) -> {
-                return launcher.new ProcStarter()
-                        .cmds(args)
-                        .stdout(listener)
-                        .pwd(workspace)
-                        .envs(env)
-                        .start();
-            };
-
             Consumer<String> resultSetter = (String resAsString) -> {
                 run.setResult(Result.fromString(resAsString));
             };
 
+            final String qfBinaryPath;
+            if (qftParams.getCustomPath() == null && run instanceof AbstractBuild) {
+                Computer comp = Computer.currentComputer();
+                assert(comp != null);
+                QFTestConfigBuilder.DescriptorImpl theDescriptor = Jenkins.get().getDescriptorByType(QFTestConfigBuilder.DescriptorImpl.class);
+                qfBinaryPath = env.expand(comp.isUnix() ? theDescriptor.getQfPathUnix() : theDescriptor.getQfPath());
+            } else {
+                qfBinaryPath = env.expand(qftParams.getCustomPath());
+            }
+
             //RUN SUITES
             Character reducedQFTReturnValue = qftParams.getSuitefield().stream()
-                    .peek(sf -> listener.getLogger().println(sf.toString())) //before env expansion
+                    //.peek(sf -> listener.getLogger().println(sf.toString())) //before env expansion
                     .map(sf -> new Suites(
                             env.expand(sf.getSuitename()), env.expand(sf.getCustomParam())
                     ))
-                    .peek(sf -> listener.getLogger().println(sf.toString())) //after env expansion
+                    //.peek(sf -> listener.getLogger().println(sf.toString())) //after env expansion
                     .flatMap(sf -> {
                         try {
                             return sf.expand(workspace);
@@ -125,24 +117,23 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
                     .map(sf -> {
                         try {
 
-                            QFTestCommandLineBuilder args = QFTestCommandLineBuilder.newCommandLine(
-                                    qftParams.getCustomPath(), launcher.isUnix(), QFTestCommandLineBuilder.RunMode.RUN
+                            QFTestCommandLine args = QFTestCommandLine.newCommandLine(
+                                    qfBinaryPath, workspace.toComputer().isUnix(), QFTestCommandLine.RunMode.RUN
                             );
 
-                            args.presetArg(QFTestCommandLineBuilder.PresetType.ENFORCE, "-run")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-report")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-report.html")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-report.html")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-report.junit")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-report.xml")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-gendoc")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-testdoc")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.DROP, "-pkgdoc")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.ENFORCE, "-nomessagewindow")
-                                    .presetArg(QFTestCommandLineBuilder.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote());
+                            args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-run")
+                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report", "")
+                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report.html", "")
+                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report.junit", "")
+                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report.xml", "")
+                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-gendoc")
+                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-testdoc")
+                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-pkgdoc")
+                                    .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-nomessagewindow")
+                                    .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote());
                             args.addSuiteConfig(workspace, sf);
 
-                            int ret = startQFTestProc.apply(args).join();
+                            int ret = args.start(launcher, listener, workspace, env).join();
 
                             listener.getLogger().println("  Finished with return value: " + ret);
                             return (char) ret;
@@ -197,10 +188,10 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
 
             try {
 
-                QFTestCommandLineBuilder args = QFTestCommandLineBuilder.newCommandLine(
-                        qftParams.getCustomPath(), launcher.isUnix(), QFTestCommandLineBuilder.RunMode.GENREPORT
+                QFTestCommandLine args = QFTestCommandLine.newCommandLine(
+                        qfBinaryPath, workspace.toComputer().isUnix(), QFTestCommandLine.RunMode.GENREPORT
                 );
-                args.presetArg(QFTestCommandLineBuilder.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote());
+                args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote());
 
                 RunLogs rl = new RunLogs(
                         new ArgumentListBuilder(
@@ -210,7 +201,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
 
                 int nReports = args.addSuiteConfig(qrzdir, rl);
                 if (nReports > 0) {
-                    startQFTestProc.apply(args).join();
+                    args.start(launcher, listener, workspace, env).join();
                 } else {
                     listener.getLogger().println("No reports found. Marking run with `test failure'");
                     run.setResult(Result.fromString(qftParams.getOnTestFailure()));

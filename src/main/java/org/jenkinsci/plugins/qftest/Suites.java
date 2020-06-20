@@ -49,11 +49,6 @@ import java.util.List;
 import java.util.stream.Stream;
 import java.util.regex.Pattern;
 
-
-/**
- *
- * @author QFS, Sebastian Kleber
- */
 public class Suites extends AbstractDescribableImpl<Suites> implements Serializable {
 
 	private final String suitename;

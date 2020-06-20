@@ -16,6 +16,7 @@ import hudson.Launcher;
 import hudson.model.Queue;
 import hudson.model.Run;
 import hudson.model.TaskListener;
+import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.StepDescriptor;
@@ -24,6 +25,7 @@ import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
 import hudson.model.Result;
+import org.kohsuke.stapler.QueryParameter;
 
 public class QFTestStep extends Step implements QFTestParamProvider {
 
@@ -145,6 +147,27 @@ public class QFTestStep extends Step implements QFTestParamProvider {
         @Nonnull
         public String getDisplayName() {
             return "Run the configured QF-Test suites.";
+        }
+
+
+        public ListBoxModel doFillOnTestWarningItems() {
+            //no persistent configuration available .. use default
+            return QFTestConfigBuilder.DescriptorImpl.fillOnTestResult(DefaultValues.testWarning);
+        }
+
+        public ListBoxModel doFillOnTestErrorItems() {
+            //no persistent configuration available .. use default
+            return QFTestConfigBuilder.DescriptorImpl.fillOnTestResult(DefaultValues.testError);
+        }
+
+        public ListBoxModel doFillOnTestExceptionItems() {
+            //no persistent configuration available .. use default
+            return QFTestConfigBuilder.DescriptorImpl.fillOnTestResult(DefaultValues.testException);
+        }
+
+        public ListBoxModel doFillOnTestFailureItems() {
+            //no persistent configuration available .. use default
+            return QFTestConfigBuilder.DescriptorImpl.fillOnTestResult(DefaultValues.testFailure);
         }
     }
 }
