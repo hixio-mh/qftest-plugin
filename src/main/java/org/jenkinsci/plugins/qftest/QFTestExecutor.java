@@ -8,6 +8,8 @@ import hudson.model.*;
 import hudson.util.ArgumentListBuilder;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
+import org.jenkinsci.plugins.workflow.graph.FlowNode;
+import org.jenkinsci.plugins.workflow.actions.WarningAction;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
 import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 
@@ -20,7 +22,7 @@ import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
+public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> {
 
     final QFTestParamProvider params;
 
@@ -30,8 +32,8 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
     }
 
     @Override
-    protected Void run() throws Exception {
-        Imp.run(
+    protected Result run() throws Exception {
+        Result res = Imp.run(
                 getContext().get(Run.class),
                 getContext().get(FilePath.class),
                 getContext().get(Launcher.class),
@@ -40,7 +42,8 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
                 this.params
         );
 
-        return (Void) null;
+        getContext().get(FlowNode.class).addOrReplaceAction(new WarningAction((res)));
+        return res;
     }
 
     public static class Imp {
@@ -55,7 +58,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
         }
 
         //TODO: return result objects which may be further processed by the different plugin flavours
-        static public void run(
+        static public Result run(
                 @Nonnull Run<?, ?> run,
                 @Nonnull FilePath workspace,
                 @Nonnull Launcher launcher,
@@ -81,9 +84,6 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
             FilePath qrzdir = logdir.child("qrz");
             qrzdir.mkdirs();
 
-            Consumer<String> resultSetter = (String resAsString) -> {
-                run.setResult(Result.fromString(resAsString));
-            };
 
             final String qfBinaryPath;
             if (qftParams.getCustomPath() == null && run instanceof AbstractBuild) {
@@ -148,31 +148,28 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
 
             //DETEERMINE BUILD STATUS
 
+            Result jenkinsResult;
+
             if (reducedQFTReturnValue != null ) {
                 switch (reducedQFTReturnValue.charValue()) {
                     case (0):
-                        //run.setResult(run.getResult().combine(Result.SUCCESS));
-                        resultSetter.accept(Result.SUCCESS.toString());
+                        jenkinsResult = Result.SUCCESS;
                         break;
                     case (1):
-                        //run.setResult(run.getResult().combine(onTestWarning));
-                        resultSetter.accept(qftParams.getOnTestWarning());
+                        jenkinsResult = Result.fromString(qftParams.getOnTestWarning());
                         break;
                     case (2):
-                        //run.setResult(run.getResult().combine(onTestError));
-                        resultSetter.accept(qftParams.getOnTestError());
+                        jenkinsResult = Result.fromString(qftParams.getOnTestError());
                         break;
                     case (3):
-                        //run.setResult(run.getResult().combine(onTestException));
-                        resultSetter.accept(qftParams.getOnTestException());
+                        jenkinsResult = Result.fromString(qftParams.getOnTestException());
                         break;
                     default:
-                        //run.setResult(run.getResult().combine(onTestFailure));
-                        resultSetter.accept(qftParams.getOnTestFailure());
+                        jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
                         break;
                 }
             } else {
-                resultSetter.accept(qftParams.getOnTestFailure());
+                jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
             }
 
             //PICKUP ARTIFACTS
@@ -191,13 +188,12 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
                 QFTestCommandLine args = QFTestCommandLine.newCommandLine(
                         qfBinaryPath, workspace.toComputer().isUnix(), QFTestCommandLine.RunMode.GENREPORT
                 );
-                args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote());
 
-                RunLogs rl = new RunLogs(
-                        new ArgumentListBuilder(
-							"-report.html", htmldir.getRemote(), "-report.junit", junitdir.getRemote()
-                        ).toStringWithQuote()
-                );
+                args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote())
+                        .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-report.html", htmldir.getRemote())
+                        .presetArg(QFTestCommandLine.PresetType.DEFAULT, "-report.junit", junitdir.getRemote());
+
+                RunLogs rl = new RunLogs(qftParams.getReportGenArgs());
 
                 int nReports = args.addSuiteConfig(qrzdir, rl);
                 if (nReports > 0) {
@@ -207,7 +203,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
                     run.setResult(Result.fromString(qftParams.getOnTestFailure()));
                 }
             } catch (java.lang.Exception ex) {
-                resultSetter.accept(qftParams.getOnTestFailure());
+                jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
                 Functions.printStackTrace(ex, listener.fatalError(ex.getMessage()));
             }
 
@@ -217,6 +213,12 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Void> {
 						"QF-Test Report", htmldir.getRemote(), "report.html", true, false, false
                     )), qftParams.getClass() //TODO: this clazz ok?
             );
+
+
+            run.setResult(jenkinsResult);
+            return jenkinsResult;
         }
     }
 }
+
+
