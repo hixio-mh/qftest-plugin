@@ -50,4 +50,8 @@
         </f:entry>
     </f:advanced>
 
+    <f:entry title="Extra report generation arguments" field="reportGenArgs">
+        <f:textbox />
+    </f:entry>
+
 </j:jelly>

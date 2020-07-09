@@ -22,21 +22,6 @@ public interface QFTestParamProvider extends Serializable {
 
     String getOnTestException();
 
-
-   /*
-            if (this.getCustomPath() != null) {
-        path = this.customPath;
-    } else if (launcher.isUnix() && getDescriptor().getQfPathUnix() != null) {
-        path = getDescriptor().qfPathUnix;
-    } else if (!launcher.isUnix() && getDescriptor().getQfPath() != null) {
-        path = this.getDescriptor().qfPath;
-    } else {
-        if (launcher.isUnix()) {
-            path = "qftest";
-        } else {
-            path = "qftestc.exe";
-        }
-    }
-    */
+    String getReportGenArgs();
 }
 

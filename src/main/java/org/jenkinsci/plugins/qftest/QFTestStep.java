@@ -76,6 +76,19 @@ public class QFTestStep extends Step implements QFTestParamProvider {
         }
     }
 
+    private String customReportArgs = "";
+
+    @Override
+    public String getReportGenArgs() {
+        return customReportArgs;
+    }
+
+    @DataBoundSetter
+    public void setReportGenArgs(String extraArgs) {
+        customReportArgs = extraArgs;
+
+    }
+
     private Result onTestWarning;
     private Result onTestError;
     private Result onTestException;

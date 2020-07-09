@@ -216,6 +216,11 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
 
 
             run.setResult(jenkinsResult);
+
+            if (jenkinsResult == Result.ABORTED) {
+                throw new AbortException("Aborted due to failure during QF-Test build step");
+            }
+
             return jenkinsResult;
         }
     }
