@@ -31,6 +31,10 @@ class CommandLineTests {
 
         Assertions.assertEquals(binary + " -run -batch -logdir logHERE aSuite.qft",
                 builder.toString(), "Overwrite does not work as intended");
+
+        Assertions.assertEquals("-logdir alogdir",
+                String.join(" ", builder.getAlteredArgs())
+        );
     }
 
     @Test
@@ -41,6 +45,10 @@ class CommandLineTests {
 
         Assertions.assertEquals(binary + " -run -batch this aSuite.qft",
                 builder.toString(), "Drop does not work as intended");
+
+        Assertions.assertEquals("-dontDoThat",
+                String.join(" ", builder.getAlteredArgs())
+        );
     }
 
     @Test
@@ -51,6 +59,10 @@ class CommandLineTests {
 
         Assertions.assertEquals(binary + " -run -batch aSuite.qft",
                 builder.toString(), "Drop does not work as intended");
+
+        Assertions.assertEquals("-dontDoThat this",
+                String.join(" ", builder.getAlteredArgs())
+        );
     }
 
     @Test

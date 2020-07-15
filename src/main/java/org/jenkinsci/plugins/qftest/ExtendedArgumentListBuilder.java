@@ -2,9 +2,8 @@ package org.jenkinsci.plugins.qftest;
 
 import hudson.util.ArgumentListBuilder;
 
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Stream;
 
 public class ExtendedArgumentListBuilder extends ArgumentListBuilder {
 
@@ -13,6 +12,7 @@ public class ExtendedArgumentListBuilder extends ArgumentListBuilder {
     private Map<String, String> defaults = new HashMap();
     private Map<String, String> drops = new HashMap();
 
+    private List<String> alteredArgs = new ArrayList<String>();
 
     public enum PresetType {
         ENFORCE,
@@ -53,21 +53,24 @@ public class ExtendedArgumentListBuilder extends ArgumentListBuilder {
 
     public ExtendedArgumentListBuilder add(String arg, boolean mask) {
 
-        if (skipValue) {
-            skipValue = false;
+        //will this argument be altered by preset definitions?
+        if (skipValue || drops.containsKey(arg) || overwrites.containsKey(arg)) {
+            alteredArgs.add(arg);
 
-        } else if (drops.containsKey(arg)) {
-            //drop key (and value?)
-            if (drops.get(arg) != null) {
+            if (skipValue) {
+                skipValue = false;
+
+            } else if (drops.containsKey(arg)) {
+                //drop key (and value?)
+                if (drops.get(arg) != null) {
+                    skipValue = true;
+                }
+            } else if (overwrites.containsKey(arg)) {
+                //overwrite value
+                super.add(arg, mask);
+                super.add(overwrites.get(arg), mask);
                 skipValue = true;
             }
-
-        } else if (overwrites.containsKey(arg)) {
-            //overwrite value
-            super.add(arg, mask);
-            super.add(overwrites.get(arg), mask);
-            skipValue = true;
-
         } else if (defaults.containsKey(arg)) {
             //already added..remove old values and take these
             final List addedArgs = this.toList();
@@ -82,8 +85,12 @@ public class ExtendedArgumentListBuilder extends ArgumentListBuilder {
 
         } else {
             super.add(arg, mask);
-
         }
         return this;
     }
+
+    public List getAlteredArgs() {
+        return Collections.unmodifiableList(alteredArgs);
+    }
+
 }

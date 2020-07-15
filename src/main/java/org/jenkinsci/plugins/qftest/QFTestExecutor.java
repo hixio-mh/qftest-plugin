@@ -18,6 +18,7 @@ import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.List;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -97,15 +98,13 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
 
             //RUN SUITES
             Character reducedQFTReturnValue = qftParams.getSuitefield().stream()
-                    //.peek(sf -> listener.getLogger().println(sf.toString())) //before env expansion
                     .map(sf -> new Suites(
                             env.expand(sf.getSuitename()), env.expand(sf.getCustomParam())
                     ))
-                    //.peek(sf -> listener.getLogger().println(sf.toString())) //after env expansion
                     .flatMap(sf -> {
                         try {
                             return sf.expand(workspace);
-                        } catch (java.lang.Exception ex) {
+                        } catch (Exception ex) {
                             Functions.printStackTrace(
                                     ex, listener.fatalError(
                                             new StringBuilder("During expansion of").append(sf).append("\n").append(ex.getMessage()).toString()
@@ -134,11 +133,16 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
                             args.addSuiteConfig(workspace, sf);
 
                             int ret = args.start(launcher, listener, workspace, env).join();
+                            List alteredArgs = args.getAlteredArgs();
+
+                            if (! alteredArgs.isEmpty()) {
+                                listener.getLogger().println("The following arguments have been dropped or altered:\n\t" + String.join(" ", args.getAlteredArgs()));
+                            }
 
                             listener.getLogger().println("  Finished with return value: " + ret);
                             return (char) ret;
 
-                        } catch (java.lang.Exception ex) {
+                        } catch (Exception ex) {
                             listener.error(ex.getMessage());
                             Functions.printStackTrace(ex, listener.fatalError(ex.getMessage()));
                             return (char) 4; //Test exception
@@ -198,6 +202,11 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
                 int nReports = args.addSuiteConfig(qrzdir, rl);
                 if (nReports > 0) {
                     args.start(launcher, listener, workspace, env).join();
+                    List alteredArgs = args.getAlteredArgs();
+
+                    if (! alteredArgs.isEmpty()) {
+                        listener.getLogger().println("The following arguments have been dropped or altered:\n\t" + String.join(" ", args.getAlteredArgs()));
+                    }
                 } else {
                     listener.getLogger().println("No reports found. Marking run with `test failure'");
                     run.setResult(Result.fromString(qftParams.getOnTestFailure()));
