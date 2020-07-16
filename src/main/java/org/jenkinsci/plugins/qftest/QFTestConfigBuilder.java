@@ -200,19 +200,10 @@ public class QFTestConfigBuilder extends Builder implements QFTestParamProvider
 
 	@Override
 	@SuppressWarnings("rawtypes")
-	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws java.io.IOException {
-
-		try {
-			QFTestExecutor.Imp.run(build, build.getWorkspace(), launcher, listener, build.getEnvironment(listener), this);
-			//we have set the build result explicitly via setResult...
-			return true;
-		} catch(java.lang.InterruptedException ex) { //TODO: check this
-			return false;
-		} catch (NullPointerException ex) {
-			return false;
-		}
+	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, java.io.IOException, InterruptedException {
+		QFTestExecutor.Imp.run(build, build.getWorkspace(), launcher, listener, build.getEnvironment(listener), this);
+		return true;
 	}
-
 
 	/**
 	 * Implementation of descriptor
@@ -330,19 +321,19 @@ public class QFTestConfigBuilder extends Builder implements QFTestParamProvider
 
 
 		public ListBoxModel doFillOnTestWarningItems(@QueryParameter("onTestWarning") String preset) {
-			return fillOnTestResult(Result.fromString(preset));
+			return fillOnTestResult(preset.isEmpty()? DefaultValues.testWarning : Result.fromString(preset));
 		}
 
 		public ListBoxModel doFillOnTestErrorItems(@QueryParameter("onTestError") String preset) {
-			return fillOnTestResult(Result.fromString(preset));
+			return fillOnTestResult(preset.isEmpty() ? DefaultValues.testError : Result.fromString(preset));
 		}
 
 		public ListBoxModel doFillOnTestExceptionItems(@QueryParameter("onTestException") String preset) {
-			return fillOnTestResult(Result.fromString(preset));
+			return fillOnTestResult(preset.isEmpty() ? DefaultValues.testException : Result.fromString(preset));
 		}
 
 		public ListBoxModel doFillOnTestFailureItems(@QueryParameter("onTestFailure") String preset) {
-			return fillOnTestResult(Result.fromString(preset));
+			return fillOnTestResult(preset.isEmpty() ? DefaultValues.testFailure : Result.fromString(preset));
 		}
 	}
 

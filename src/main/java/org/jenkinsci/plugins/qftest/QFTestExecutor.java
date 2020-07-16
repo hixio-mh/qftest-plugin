@@ -5,7 +5,6 @@ import htmlpublisher.HtmlPublisher;
 import htmlpublisher.HtmlPublisherTarget;
 import hudson.*;
 import hudson.model.*;
-import hudson.util.ArgumentListBuilder;
 import jenkins.model.Jenkins;
 import jenkins.util.BuildListenerAdapter;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
@@ -15,15 +14,15 @@ import org.jenkinsci.plugins.workflow.steps.SynchronousNonBlockingStepExecution;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.List;
-import java.util.function.Consumer;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> {
+public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestInfo> {
 
     final QFTestParamProvider params;
 
@@ -33,8 +32,8 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
     }
 
     @Override
-    protected Result run() throws Exception {
-        Result res = Imp.run(
+    protected QFTestInfo run() throws Exception {
+        QFTestInfo res = Imp.run(
                 getContext().get(Run.class),
                 getContext().get(FilePath.class),
                 getContext().get(Launcher.class),
@@ -43,14 +42,17 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
                 this.params
         );
 
-        getContext().get(FlowNode.class).addOrReplaceAction(new WarningAction((res)));
+        getContext().get(FlowNode.class).addOrReplaceAction(new WarningAction((res.getJenkinsResult())));
         return res;
     }
 
     public static class Imp {
 
-        static private Character reduceReturnValues(@CheckForNull  Character previous, @Nonnull Character ret) {
-            if (previous  == null || ret > previous) {
+        static private Character reduceReturnValues(@CheckForNull  Character previous, @CheckForNull Character ret) {
+
+            if (ret == null) {
+                return previous;
+            } else if (previous  == null || ret > previous) {
                 //only update to first non-negative return value ) {
                 return ret;
             } else {
@@ -59,7 +61,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
         }
 
         //TODO: return result objects which may be further processed by the different plugin flavours
-        static public Result run(
+        static public QFTestInfo run(
                 @Nonnull Run<?, ?> run,
                 @Nonnull FilePath workspace,
                 @Nonnull Launcher launcher,
@@ -101,15 +103,18 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
                     .map(sf -> new Suites(
                             env.expand(sf.getSuitename()), env.expand(sf.getCustomParam())
                     ))
-                    .flatMap(sf -> {
+                    .flatMap(sf -> { //expand to single suites
                         try {
                             return sf.expand(workspace);
+                        } catch (FileNotFoundException ex) {
+                            listener.getLogger().println(ex.getMessage());
+                            return Stream.empty();
                         } catch (Exception ex) {
                             Functions.printStackTrace(
                                     ex, listener.fatalError(
-                                            new StringBuilder("During expansion of").append(sf).append("\n").append(ex.getMessage()).toString()
+                                            "During expansion of" + sf + "\n" + ex.getMessage()
                                     ));
-                            return Stream.<Suites>empty();
+                            return Stream.empty();
                         }
                     })
                     .peek(sf -> listener.getLogger().println(sf.toString())) //after path expansion
@@ -119,18 +124,19 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
                             QFTestCommandLine args = QFTestCommandLine.newCommandLine(
                                     qfBinaryPath, workspace.toComputer().isUnix(), QFTestCommandLine.RunMode.RUN
                             );
+                             args
+                                .presetArg(QFTestCommandLine.PresetType.DROP, "-report", "")
+                                .presetArg(QFTestCommandLine.PresetType.DROP, "-report.html", "")
+                                .presetArg(QFTestCommandLine.PresetType.DROP, "-report.junit", "")
+                                .presetArg(QFTestCommandLine.PresetType.DROP, "-report.xml", "")
+                                .presetArg(QFTestCommandLine.PresetType.DROP, "-gendoc")
+                                .presetArg(QFTestCommandLine.PresetType.DROP, "-testdoc")
+                                .presetArg(QFTestCommandLine.PresetType.DROP, "-pkgdoc")
+                                .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-nomessagewindow")
+                                .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote());
+                            int nSuites = args.addSuiteConfig(workspace, sf);
 
-                            args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-run")
-                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report", "")
-                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report.html", "")
-                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report.junit", "")
-                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-report.xml", "")
-                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-gendoc")
-                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-testdoc")
-                                    .presetArg(QFTestCommandLine.PresetType.DROP, "-pkgdoc")
-                                    .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-nomessagewindow")
-                                    .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote());
-                            args.addSuiteConfig(workspace, sf);
+                            assert(nSuites == 1); //expansion already done by explicit call of Suite::expand above
 
                             int ret = args.start(launcher, listener, workspace, env).join();
                             List alteredArgs = args.getAlteredArgs();
@@ -172,57 +178,58 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
                         jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
                         break;
                 }
-            } else {
-                jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
-            }
 
-            //PICKUP ARTIFACTS
-            java.util.function.Function<FilePath, String> fp_names = (fp -> fp.getName());
-            run.pickArtifactManager().archive(
-                    qrzdir, launcher, new BuildListenerAdapter(listener),
-                    Arrays.stream(qrzdir.list("*.q*"))
-                            .collect(Collectors.toMap(fp_names, fp_names))
-            );
-
-            //CREATE REPORTS
-            listener.getLogger().println("Creating reports");
-
-            try {
-
-                QFTestCommandLine args = QFTestCommandLine.newCommandLine(
-                        qfBinaryPath, workspace.toComputer().isUnix(), QFTestCommandLine.RunMode.GENREPORT
+                //PICKUP ARTIFACTS
+                java.util.function.Function<FilePath, String> fp_names = (fp -> fp.getName());
+                run.pickArtifactManager().archive(
+                        qrzdir, launcher, new BuildListenerAdapter(listener),
+                        Arrays.stream(qrzdir.list("*.q*"))
+                                .collect(Collectors.toMap(fp_names, fp_names))
                 );
 
-                args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote())
-                        .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-report.html", htmldir.getRemote())
-                        .presetArg(QFTestCommandLine.PresetType.DEFAULT, "-report.junit", junitdir.getRemote());
+                //CREATE REPORTS
+                listener.getLogger().println("Creating reports");
 
-                RunLogs rl = new RunLogs(qftParams.getReportGenArgs());
+                try {
 
-                int nReports = args.addSuiteConfig(qrzdir, rl);
-                if (nReports > 0) {
-                    args.start(launcher, listener, workspace, env).join();
-                    List alteredArgs = args.getAlteredArgs();
+                    QFTestCommandLine args = QFTestCommandLine.newCommandLine(
+                            qfBinaryPath, workspace.toComputer().isUnix(), QFTestCommandLine.RunMode.GENREPORT
+                    );
 
-                    if (! alteredArgs.isEmpty()) {
-                        listener.getLogger().println("The following arguments have been dropped or altered:\n\t" + String.join(" ", args.getAlteredArgs()));
+                    args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote())
+                            .presetArg(QFTestCommandLine.PresetType.ENFORCE, "-report.html", htmldir.getRemote())
+                            .presetArg(QFTestCommandLine.PresetType.DEFAULT, "-report.junit", junitdir.getRemote());
+
+                    RunLogs rl = new RunLogs(qftParams.getReportGenArgs());
+
+                    int nReports = args.addSuiteConfig(qrzdir, rl);
+                    if (nReports > 0) {
+                        args.start(launcher, listener, workspace, env).join();
+                        List alteredArgs = args.getAlteredArgs();
+
+                        if (! alteredArgs.isEmpty()) {
+                            listener.getLogger().println("The following arguments have been dropped or altered:\n\t" + String.join(" ", args.getAlteredArgs()));
+                        }
+                    } else {
+                        listener.getLogger().println("No reports found. Marking run with `test failure'");
+                        run.setResult(Result.fromString(qftParams.getOnTestFailure()));
                     }
-                } else {
-                    listener.getLogger().println("No reports found. Marking run with `test failure'");
-                    run.setResult(Result.fromString(qftParams.getOnTestFailure()));
+                } catch (java.lang.Exception ex) {
+                    jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
+                    Functions.printStackTrace(ex, listener.fatalError(ex.getMessage()));
                 }
-            } catch (java.lang.Exception ex) {
+
+                //Publish HTML report
+                HtmlPublisher.publishReports(
+                        run, workspace, listener, Collections.singletonList(new HtmlPublisherTarget(
+                                "QF-Test Report", htmldir.getRemote(), "report.html", true, false, false
+                        )), qftParams.getClass() //TODO: this clazz ok?
+                );
+
+            } else { //never run
+                listener.getLogger().println("No test suites were processed at all!");
                 jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
-                Functions.printStackTrace(ex, listener.fatalError(ex.getMessage()));
             }
-
-            //Publish HTML report
-            HtmlPublisher.publishReports(
-                    run, workspace, listener, Collections.singletonList(new HtmlPublisherTarget(
-						"QF-Test Report", htmldir.getRemote(), "report.html", true, false, false
-                    )), qftParams.getClass() //TODO: this clazz ok?
-            );
-
 
             run.setResult(jenkinsResult);
 
@@ -230,7 +237,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<Result> 
                 throw new AbortException("Aborted due to failure during QF-Test build step");
             }
 
-            return jenkinsResult;
+            return new QFTestInfo(jenkinsResult);
         }
     }
 }

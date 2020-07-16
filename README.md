@@ -58,7 +58,7 @@ It can be specified on the global configuration page (Jenkins -> Manage Jenkins)
 | Parameter | Optional | Desciption |
 | --- | --- | --- |
 | customPath | yes | Path to QF-Test executable. Specify this to override [global settings](#qf-test-binary-location). |
-| reportDirectory | yes | Directory in which QF-Test output files are stored in. The [directory structure is explained here](#report_directory_structure)
+| reportDirectory | yes | Directory in which QF-Test output files are stored in. The [directory structure is explained here](#directory-structure)
 
 
 #### Input control
@@ -66,9 +66,11 @@ The `suitefield` list defines against which suites and under which conditions th
 
 | Key | Optional | Desciption |
 | --- | --- | --- |
-| customParam | no | Additional command line parameters passed to QF-Test for test execution. Due to its presets, the plugin produces meaningful result even when this field is left empty (`""`) |
+| customParam | no | Additional command line parameters passed to QF-Test for test execution. Due to its presets, the plugin produces meaningful result even when this field is left empty (`""`). |
 | suitename | no | Test suite(s) to be run. [Ant-style globbing](https://ant.apache.org/manual/dirtasks.html) is supported. If the expression resolves to a directory, all test suites found in the hiearchy below the given starting point will be considered. |
 
+ A few assumptions concering the actual QF-Test run have to be met. Therefore some arguments are overwritten by the plugin itself (in particular options that alter the runlog location). Dropped or altered arguments will be mentioned in the [`Console Log`](#debugging-and-further-development).
+ 
 For a more fine-grained control which suites and test cases to run, use the "__-suitesfile__" as very last argument of the `customParam` field. The suitename field then specifies the path to the suitesfile.
 
 
@@ -84,7 +86,12 @@ onTestException | yes | FAILURE |
 onTestFailure | yes | FAILURE |
 
 
-#### Report directory structure
+#### Report generation
+
+##### Additional arguments
+Additional arguments to be considered during the report generation stage can be set here. The remarks made in the [input control section](#input-control) also apply here: Some parameters are restricted and cannot be changed, e.g. these that control the [report directory structure](#directory-structure)).
+
+##### Directory structure
 
 Using a well defined runlog directory is needed to identify the produced run logs. It also sets up a consistent interface to other Jenkins plugins:
 
@@ -94,13 +101,14 @@ The general structure is as follows:<br/>
 * `<reportDirectory>/junit`: QF-Test junit report. Can be processed further by the Jenkins `junit` plugin.
 
 
+
 ## The QF-Test build step
 
-When run, the QF-Test build step tests your SUT by means of all testsuites referred to by the suitelistst. Runlogs that are produced during the Jenkins build will be marked as build artifacts and listed as such on the build summary page. In addition, a QF-Test report is generated covering all tests that have been run.
+When run, the QF-Test build step tests your SUT by means of all testsuites referred to by the suitelist. Runlogs that are produced during the Jenkins build will be marked as build artifacts and listed as such on the build summary page. In addition, a QF-Test report is generated covering all tests that have been run.
 
 ![](./Screenshot_result.png)
 
-*Screenshot of the build summary page. The highlighted lins lead to the report and the runlogs that are generated during the QF-Test build step*
+*Screenshot of the build summary page. The highlighted links lead to the report and the runlogs that are generated during the QF-Test build step*
 
 Finally, the under [result control](#result-control) presented mechanism determines how outcomes of the QF-Test run influence the final Jenkins build result.
 

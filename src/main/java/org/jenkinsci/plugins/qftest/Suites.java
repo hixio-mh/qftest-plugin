@@ -39,6 +39,7 @@ import static com.pivovarit.function.ThrowingSupplier.unchecked;
 
 
 import java.io.File;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.Serializable;
 import java.nio.file.Path;
@@ -135,17 +136,6 @@ public class Suites extends AbstractDescribableImpl<Suites> implements Serializa
 		}
 	}
 
-//	protected String expandDirToGlob(String dirname) {
-//		if (dirname.equals(".")) {
-//			dirname = "";
-//		}
-//		if (!dirname.isEmpty() && dirname.charAt(dirname.length()-1) != '/') {
-//	    	dirname += '/';
-//		}
-//		return dirname + "**/*.qft";
-//	}
-
-
 	//TODO: this should return a Stream of suites
 	public Stream<FilePath> getExpandedPaths(FilePath base) throws IOException, InterruptedException {
 
@@ -156,8 +146,15 @@ public class Suites extends AbstractDescribableImpl<Suites> implements Serializa
 			} else {
 				return Stream.of(childCandid);
 			}
+
 		} else {
-			return Arrays.stream(base.list(this.suitename));
+			FilePath[] filesFound = base.list(this.suitename);
+
+			if (filesFound.length > 0) {
+				return Arrays.stream(filesFound);
+			} else {
+				throw new FileNotFoundException("No suites could be found by (globbing) expression `" + this.suitename + "'");
+			}
 		}
 	}
 
