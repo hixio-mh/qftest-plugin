@@ -1,22 +1,12 @@
 package org.jenkinsci.plugins.qftest;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
 import javax.annotation.CheckForNull;
 import javax.annotation.Nonnull;
 
-import com.google.common.collect.ImmutableSet;
-import hudson.EnvVars;
-import hudson.Extension;
-import hudson.FilePath;
-import hudson.Launcher;
-import hudson.model.Queue;
-import hudson.model.Run;
-import hudson.model.TaskListener;
-import hudson.util.ListBoxModel;
 import org.jenkinsci.plugins.workflow.graph.FlowNode;
 import org.jenkinsci.plugins.workflow.steps.Step;
 import org.jenkinsci.plugins.workflow.steps.StepContext;
@@ -25,15 +15,24 @@ import org.jenkinsci.plugins.workflow.steps.StepExecution;
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 
+import com.google.common.collect.ImmutableSet;
+
+import hudson.EnvVars;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
 import hudson.model.Result;
-import org.kohsuke.stapler.QueryParameter;
+import hudson.model.Run;
+import hudson.model.TaskListener;
+import hudson.util.ListBoxModel;
 
 public class QFTestStep extends Step implements QFTestParamProvider {
 
+	private static final long serialVersionUID = 958905529533079450L;
 
-    /* >> SAME LOGIC AS IN QFTESTSTEP >> */
+	/* >> SAME LOGIC AS IN QFTESTSTEP >> */
 
-    @DataBoundConstructor
+	@DataBoundConstructor
     public QFTestStep(List<Suites> suitefield) {
         this.suitefield = new ArrayList<>(suitefield);
     }

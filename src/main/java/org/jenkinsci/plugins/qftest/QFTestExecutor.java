@@ -1,6 +1,5 @@
 package org.jenkinsci.plugins.qftest;
 
-import com.pivovarit.function.ThrowingFunction;
 import htmlpublisher.HtmlPublisher;
 import htmlpublisher.HtmlPublisherTarget;
 import hudson.*;
@@ -24,7 +23,9 @@ import java.util.stream.Stream;
 
 public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestInfo> {
 
-    final QFTestParamProvider params;
+	private static final long serialVersionUID = 4942008420613658114L;
+	
+	final QFTestParamProvider params;
 
     QFTestExecutor(QFTestParamProvider params, StepContext context) {
         super(context);
@@ -60,7 +61,6 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestIn
             }
         }
 
-        //TODO: return result objects which may be further processed by the different plugin flavours
         static public QFTestInfo run(
                 @Nonnull Run<?, ?> run,
                 @Nonnull FilePath workspace,
@@ -70,8 +70,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestIn
                 QFTestParamProvider qftParams)
                 throws InterruptedException, IOException
         {
-
-
+            Result jenkinsResult;
             FilePath logdir = workspace.child(env.expand(qftParams.getReportDirectory()));
 
             listener.getLogger().println("(Creating and/or clearing " + logdir.getName() + " directory");
@@ -93,7 +92,17 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestIn
                 Computer comp = Computer.currentComputer();
                 assert(comp != null);
                 QFTestConfigBuilder.DescriptorImpl theDescriptor = Jenkins.get().getDescriptorByType(QFTestConfigBuilder.DescriptorImpl.class);
-                qfBinaryPath = env.expand(comp.isUnix() ? theDescriptor.getQfPathUnix() : theDescriptor.getQfPath());
+
+                Boolean isUnix = comp.isUnix();
+                if (isUnix != null) {
+                    String path =  isUnix ? theDescriptor.getQfPathUnix() : theDescriptor.getQfPath();
+                    qfBinaryPath = env.expand(path);
+                } else {
+                    listener.error("Computer is offline. Unable to determine QF-Test binary path");
+                    jenkinsResult = Result.fromString(qftParams.getOnTestFailure());
+                    run.setResult(jenkinsResult);
+                    return new QFTestInfo(jenkinsResult);
+                }
             } else {
                 qfBinaryPath = env.expand(qftParams.getCustomPath());
             }
@@ -139,7 +148,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestIn
                             assert(nSuites == 1); //expansion already done by explicit call of Suite::expand above
 
                             int ret = args.start(launcher, listener, workspace, env).join();
-                            List alteredArgs = args.getAlteredArgs();
+                            List<String> alteredArgs = args.getAlteredArgs();
 
                             if (! alteredArgs.isEmpty()) {
                                 listener.getLogger().println("The following arguments have been dropped or altered:\n\t" + String.join(" ", args.getAlteredArgs()));
@@ -157,8 +166,6 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestIn
                     .reduce(null, Imp::reduceReturnValues);
 
             //DETEERMINE BUILD STATUS
-
-            Result jenkinsResult;
 
             if (reducedQFTReturnValue != null ) {
                 switch (reducedQFTReturnValue.charValue()) {
@@ -191,9 +198,13 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestIn
                 listener.getLogger().println("Creating reports");
 
                 try {
+                	Computer comp = workspace.toComputer();
+                	assert(comp != null);
+                    Boolean isUnix = comp.isUnix();
+                    assert(isUnix != null);
 
                     QFTestCommandLine args = QFTestCommandLine.newCommandLine(
-                            qfBinaryPath, workspace.toComputer().isUnix(), QFTestCommandLine.RunMode.GENREPORT
+                            qfBinaryPath, isUnix, QFTestCommandLine.RunMode.GENREPORT
                     );
 
                     args.presetArg(QFTestCommandLine.PresetType.ENFORCE, "-runlogdir", qrzdir.getRemote())
@@ -205,7 +216,7 @@ public class QFTestExecutor extends SynchronousNonBlockingStepExecution<QFTestIn
                     int nReports = args.addSuiteConfig(qrzdir, rl);
                     if (nReports > 0) {
                         args.start(launcher, listener, workspace, env).join();
-                        List alteredArgs = args.getAlteredArgs();
+                        List<String> alteredArgs = args.getAlteredArgs();
 
                         if (! alteredArgs.isEmpty()) {
                             listener.getLogger().println("The following arguments have been dropped or altered:\n\t" + String.join(" ", args.getAlteredArgs()));

@@ -3,7 +3,9 @@ package org.jenkinsci.plugins.qftest;
 
 public class RunLogs extends Suites {
 
-    public RunLogs(String customParam) {
+	private static final long serialVersionUID = 3782884897040482126L;
+
+	public RunLogs(String customParam) {
         super("", customParam);
     }
 

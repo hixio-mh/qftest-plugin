@@ -4,8 +4,8 @@
 
 # The QF-Test Jenkins plugin
 
-QF-Test can extensively controlled via command line options, which allows its integration in various Continous Integration and Testing frameworks.
-Because of this, QF-Test can easily be integrated in a Jenkins pipeline via a sh statement (with the command line parameters chosen appropriatley).
+QF-Test can extensively be controlled via command line options, which allows its integration in various Continous Integration and Testing frameworks.
+Because of this, QF-Test can easily be integrated in a Jenkins pipeline via a sh statement (with the command line parameters chosen appropriately).
 In most scenarios, this plugin makes it even easier to perform GUI tests on your application within a jenkins build pipeline:
 
 
@@ -40,7 +40,7 @@ The corresponding pipeline step would look like this:
 	)
 ```
 
-This settings suffice to integrate QF-Test in a jenkins project, the (reference)[#reference] describes additinal configuration tweaks.
+This settings suffice to integrate QF-Test in a jenkins project, the (reference)[#reference] describes additional configuration tweaks.
 
 ### Reference
 
@@ -67,9 +67,9 @@ The `suitefield` list defines against which suites and under which conditions th
 | Key | Optional | Desciption |
 | --- | --- | --- |
 | customParam | no | Additional command line parameters passed to QF-Test for test execution. Due to its presets, the plugin produces meaningful result even when this field is left empty (`""`). |
-| suitename | no | Test suite(s) to be run. [Ant-style globbing](https://ant.apache.org/manual/dirtasks.html) is supported. If the expression resolves to a directory, all test suites found in the hiearchy below the given starting point will be considered. |
+| suitename | no | Test suite(s) to be run. [Ant-style globbing](https://ant.apache.org/manual/dirtasks.html) is supported. If the expression resolves to a directory, all test suites found in the hierarchy below the given starting point will be considered. |
 
- A few assumptions concering the actual QF-Test run have to be met. Therefore some arguments are overwritten by the plugin itself (in particular options that alter the runlog location). Dropped or altered arguments will be mentioned in the [`Console Log`](#debugging-and-further-development).
+ A few assumptions regarding the finally issued QF-Test command have to be met. Thus, some arguments are overwritten by the plugin itself (in particular options that alter the runlog location). Dropped or altered arguments will be mentioned in the [`Console Log`](#debugging-and-further-development).
  
 For a more fine-grained control which suites and test cases to run, use the "__-suitesfile__" as very last argument of the `customParam` field. The suitename field then specifies the path to the suitesfile.
 
@@ -93,10 +93,10 @@ Additional arguments to be considered during the report generation stage can be 
 
 ##### Directory structure
 
-Using a well defined runlog directory is needed to identify the produced run logs. It also sets up a consistent interface to other Jenkins plugins:
+Using a well-defined runlog directory is needed to identify the produced runlogs. It also sets up a consistent interface to other Jenkins plugins:
 
 The general structure is as follows:<br/>
-* `<reportDirectory>/qrz`: QF-Test run logs. They are automatically attached to the current Jenkins build.
+* `<reportDirectory>/qrz`: QF-Test runlogs. They are automatically attached to the current Jenkins build.
 * `<reportDirectory>/html`: QF-Test html report. Internally, its processed further by the Jenkins `publishHTML` plugin.
 * `<reportDirectory>/junit`: QF-Test junit report. Can be processed further by the Jenkins `junit` plugin.
 
@@ -117,14 +117,14 @@ Finally, the under [result control](#result-control) presented mechanism determi
 The actual test execution (i.e. the current Jenkins build) can be monitored via the `Console Log` facility.
 Among other status information, the QF-Test program calls that were generated behind the scenes by the Jenkins plugin should appear here.
 
-If your build process finshes with unexpected or even none results, this log provides additional information for debugging.
+If your build process finishes with unexpected or even none results, this log provides additional information for debugging.
 
-If the QF-Test application scenario within your Jenkins environment is beyond the scope of this plugin, the generated programm calls shown in the log can still be used as a starting point for your own developments. The adapted command lines can then be invoked directly via the `sh` build step (effectively replacing the QF-Test Jenkins plugin step.)
+If the QF-Test application scenario within your Jenkins environment is beyond the scope of this plugin, the generated program calls shown in the log can still be used as a starting point for your own developments. The adapted command lines can then be invoked directly via the `sh` build step (effectively replacing the QF-Test Jenkins plugin step.)
 
 
 
 # Pipeline examples
-The following scripts shows two pipeline use-cases that might be a good starting point when developping your own pipeline project.
+The following scripts shows two pipeline use-cases that might be a good starting point when developing your own pipeline project.
 
 Each of them forms a complete example, written in [__declarative syntax__](https://jenkins.io/doc/book/pipeline/syntax/).
 
@@ -226,17 +226,28 @@ Instead of persistently storing the testsuites in a dedicated folder and pointin
 
 
 # Changelog
+
+## v2.1
+* Additional and more advanced concepts of the jenkins pipeline mode are now supported:
+    * The QF-Test step can be run in a customized environment, which can e.g. be defined by means of the `environment` statement in a pipeline script. All relevant configuration parameters undergo parameter expansion with respect to the _environment_ set. (By contrast, _groovy variables_ are inherently handled by the interpreter. Their substitution is unaffected by this.)
+    * The QF-Test step returns now an info object of type `QFTestInfo`. At the moment, it solely encodes the Jenkins build result that has been assigned to the QF-Test step (`QFTestInfo::getJeninsResult()`)
+    * The aforementioned build result is additionally attached to the flowNode representation of the build step. A Jenkins [blog post](https://www.jenkins.io/blog/2019/07/05/jenkins-pipeline-stage-result-visualization-improvements/) disscusses the concept in greater detail.
+ * The `Console Log` has been reworked, informing now about overwritten command line parameters. It also reports missing testsuites and steps without any referenced testsuite.
+ * Extra command line parameters concerning the report generation can be specified.
+ * The path to the QF-Test installation directory can be set again to point to a specific QF-Test version. This eliminates the breaking change introduced in [_v2.0_](#v2-0). Both options are possible now. On windows nodes, a binary path pointing to a `qftest.exe` program will be silently replaced by its `qftestc.exe` counterpart, if both executables exist in the same directory.
+ 
+ 
 ## v2.0
-This version brings an overall renewal of the QF-Test jenkins plugin. Its primary goal is to proivide an **out-of the box integration** of QF-Test within Jenkins builds including **pipeline projects**. On the contrary, support for too specialized use-cases has been dropped:
+This version brings an overall renewal of the QF-Test jenkins plugin. Its primary goal is to provide an **out-of the box integration** of QF-Test within Jenkins builds including **pipeline projects**. On the contrary, support for too specialized use-cases has been dropped:
 
 * Full support of Jenkins pipeline mode
 * The QF-Test influence on the general Jenkins build result is know configurable
 * Consistency fixes when handling multiple independent suite name / parameter pairs
 * No post steps invocations are required any more. The entire functionality is now provided by the plugin itself:
 	* QF-Test execution including report creation
-	* Publishing of run logs and the test report on the Jenkins build result page
+	* Publishing of runlogs and the test report on the Jenkins build result page
 	* Setting the Jenkins build result
 * **Breaking change**: The default location of the QF-Test log directory changed. (This will also break legacy configurations with the now obsolete post build steps relaying on explicit log path)
-* **Breaking change**: Direct support for QF-Test runs in *daemon mode* has been dropped. It can still be configured via the `customParam` option. In an Jenkins build environment we recommend the usage of *Jenkins agents* instead.
+* **Breaking change**: Direct support for QF-Test runs in *deamon mode* has been dropped. It can still be configured via the `customParam` option. In an Jenkins build environment we recommend the usage of *Jenkins agents* instead.
 * **Breaking change**: Environment variables containing other characters than A-Z, numbers and _ (underscore) are not expanded anymore, because the plugin now uses the variable expansion directly from jenkins.
-* **Breaking change**: If you want to use a specific QF-Test version you need to define the location of the qftest.exe binary instead of the version specific path.
+* **Breaking change**: If you want to use a specific QF-Test version you need to define the location of the QF-Test binary instead of the version specific path.

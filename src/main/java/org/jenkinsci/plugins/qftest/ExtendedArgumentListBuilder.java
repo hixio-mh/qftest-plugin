@@ -1,16 +1,21 @@
 package org.jenkinsci.plugins.qftest;
 
-import hudson.util.ArgumentListBuilder;
+import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-import java.util.*;
-import java.util.stream.Stream;
+import hudson.util.ArgumentListBuilder;
 
 public class ExtendedArgumentListBuilder extends ArgumentListBuilder {
 
-    boolean skipValue = false;
-    private Map<String, String> overwrites = new HashMap();
-    private Map<String, String> defaults = new HashMap();
-    private Map<String, String> drops = new HashMap();
+    private static final long serialVersionUID = -3136336932803543264L;
+	
+	boolean skipValue = false;
+    private Map<String, String> overwrites = new HashMap<String, String>();
+    private Map<String, String> defaults = new HashMap<String, String>();
+    private Map<String, String> drops = new HashMap<String, String>();
 
     private List<String> alteredArgs = new ArrayList<String>();
 
@@ -73,7 +78,7 @@ public class ExtendedArgumentListBuilder extends ArgumentListBuilder {
             }
         } else if (defaults.containsKey(arg)) {
             //already added..remove old values and take these
-            final List addedArgs = this.toList();
+            final List<String> addedArgs = this.toList();
             final int idx = addedArgs.indexOf(arg);
 
             addedArgs.remove(idx);
@@ -89,7 +94,7 @@ public class ExtendedArgumentListBuilder extends ArgumentListBuilder {
         return this;
     }
 
-    public List getAlteredArgs() {
+    public List<String> getAlteredArgs() {
         return Collections.unmodifiableList(alteredArgs);
     }
 

@@ -24,34 +24,28 @@
 package org.jenkinsci.plugins.qftest;
 
 
+import static com.pivovarit.function.ThrowingFunction.unchecked;
+
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.Serializable;
+import java.util.Arrays;
+import java.util.LinkedList;
+import java.util.stream.Stream;
+
+import org.kohsuke.stapler.DataBoundConstructor;
+import org.kohsuke.stapler.QueryParameter;
+
 import hudson.Extension;
 import hudson.FilePath;
 import hudson.Util;
 import hudson.model.AbstractDescribableImpl;
 import hudson.model.Descriptor;
-
 import hudson.util.FormValidation;
-import org.kohsuke.stapler.DataBoundConstructor;
-import org.kohsuke.stapler.QueryParameter;
-
-import static com.pivovarit.function.ThrowingFunction.unchecked;
-import static com.pivovarit.function.ThrowingSupplier.unchecked;
-
-
-import java.io.File;
-import java.io.FileNotFoundException;
-import java.io.IOException;
-import java.io.Serializable;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Arrays;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.stream.Stream;
-import java.util.regex.Pattern;
 
 public class Suites extends AbstractDescribableImpl<Suites> implements Serializable {
 
+	private static final long serialVersionUID = -1961257398733150007L;
 	private final String suitename;
 	private final String customParam;
 	private String fileending;
@@ -172,7 +166,7 @@ public class Suites extends AbstractDescribableImpl<Suites> implements Serializa
 	protected Suites considerSuitesfile() {
 
 		final String suite_arg = "-suitesfile";
-		List args = new LinkedList(Arrays.asList(Util.tokenize(this.customParam)));
+		LinkedList<String> args = new LinkedList<String>(Arrays.asList(Util.tokenize(this.customParam)));
 
 
 		int idx = args.indexOf(suite_arg);

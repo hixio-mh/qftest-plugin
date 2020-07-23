@@ -57,22 +57,10 @@
       <version>1.17</version>
     </dependency>
     <dependency>
-      <groupId>org.mockito</groupId>
-      <artifactId>mockito-core</artifactId>
-      <version>${mockito.version}</version>
-      <scope>test</scope>
-    </dependency>
-    <dependency>
       <groupId>com.pivovarit</groupId>
       <artifactId>throwing-function</artifactId>
       <version>1.5.0</version>
     </dependency>
-    <dependency>
-      <groupId>org.projectlombok</groupId>
-      <artifactId>lombok</artifactId>
-    <version>1.18.4</version>
-    <scope>provided</scope>
-  </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
       <artifactId>junit-jupiter</artifactId>

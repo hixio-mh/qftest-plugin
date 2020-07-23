@@ -1,24 +1,23 @@
 package org.jenkinsci.plugins.qftest;
 
+import java.io.File;
+import java.io.IOException;
+import java.util.List;
+import java.util.stream.Collectors;
+
+import javax.annotation.Nullable;
+
 import hudson.EnvVars;
 import hudson.FilePath;
 import hudson.Launcher;
 import hudson.Proc;
-import hudson.model.AbstractBuild;
-import hudson.model.Computer;
-import hudson.model.Run;
 import hudson.model.TaskListener;
-import jenkins.model.Jenkins;
-
-import javax.annotation.Nullable;
-import java.io.File;
-import java.io.IOException;
-import java.util.*;
-import java.util.stream.Collectors;
 
 public class QFTestCommandLine extends ExtendedArgumentListBuilder {
+	
+	private static final long serialVersionUID = -8658681990707422575L;
 
-    public static enum RunMode {
+	public static enum RunMode {
         RUN("-run"),
         GENREPORT("-genreport"),
         GENDOC("-gendoc");

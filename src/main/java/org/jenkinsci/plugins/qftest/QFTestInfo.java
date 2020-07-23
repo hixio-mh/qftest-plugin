@@ -11,7 +11,9 @@ import java.io.Serializable;
  * ATM, only getJenkinsResult is implemented.
  */
 public class QFTestInfo implements Serializable {
-    private Result jenkinsResult;
+
+	private static final long serialVersionUID = 1843071790051519624L;
+	private Result jenkinsResult;
 
     @Whitelisted
     public Result getJenkinsResult() {

@@ -23,37 +23,31 @@
  */
 package org.jenkinsci.plugins.qftest;
 
-import java.lang.String;
 import java.io.IOException;
-import java.util.*;
-import java.util.function.Consumer;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.List;
 import java.util.stream.Stream;
 
-
-import com.pivovarit.function.ThrowingFunction;
-import htmlpublisher.HtmlPublisherTarget;
-import hudson.*;
-import hudson.model.*;
-import hudson.tasks.BuildStepDescriptor;
-import hudson.tasks.Builder;
-
-import hudson.util.ArgumentListBuilder;
-import hudson.util.FormValidation;
-import hudson.util.ListBoxModel;
-import net.sf.json.JSONObject;
+import javax.annotation.CheckForNull;
+import javax.annotation.Nonnull;
 
 import org.kohsuke.stapler.DataBoundConstructor;
 import org.kohsuke.stapler.DataBoundSetter;
 import org.kohsuke.stapler.QueryParameter;
 import org.kohsuke.stapler.StaplerRequest;
 
-import jenkins.tasks.SimpleBuildStep;
-import jenkins.util.BuildListenerAdapter;
-import javax.annotation.CheckForNull;
-import javax.annotation.Nonnull;
-
-import htmlpublisher.HtmlPublisher;
+import hudson.Extension;
+import hudson.FilePath;
+import hudson.Launcher;
+import hudson.model.AbstractBuild;
+import hudson.model.AbstractProject;
+import hudson.model.BuildListener;
+import hudson.model.Result;
+import hudson.tasks.BuildStepDescriptor;
+import hudson.tasks.Builder;
+import hudson.util.FormValidation;
+import hudson.util.ListBoxModel;
+import net.sf.json.JSONObject;
 
 @edu.umd.cs.findbugs.annotations.SuppressFBWarnings(
 	value="UUF_UNUSED_FIELD",
@@ -63,6 +57,8 @@ public class QFTestConfigBuilder extends Builder implements QFTestParamProvider
 {
 
 	/* deprecated members */
+	private static final long serialVersionUID = 8305941021849820496L;
+	
 	private transient boolean customReportTempDirectory;
 	private transient boolean specificQFTestVersion;
 	private transient boolean suitesEmpty;
@@ -199,9 +195,10 @@ public class QFTestConfigBuilder extends Builder implements QFTestParamProvider
 
 
 	@Override
-	@SuppressWarnings("rawtypes")
 	public boolean perform(AbstractBuild build, Launcher launcher, BuildListener listener) throws IOException, java.io.IOException, InterruptedException {
-		QFTestExecutor.Imp.run(build, build.getWorkspace(), launcher, listener, build.getEnvironment(listener), this);
+		FilePath workspace = build.getWorkspace();
+		assert(workspace != null);
+		QFTestExecutor.Imp.run(build, workspace, launcher, listener, build.getEnvironment(listener), this);
 		return true;
 	}
 
