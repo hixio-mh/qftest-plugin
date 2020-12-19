@@ -6,7 +6,7 @@
     <groupId>org.jenkins-ci.plugins</groupId>
     <artifactId>plugin</artifactId>
     <version>3.56</version>
-    <relativePath />
+    <relativePath/>
   </parent>
 
   <properties>
@@ -59,7 +59,7 @@
     <dependency>
       <groupId>com.pivovarit</groupId>
       <artifactId>throwing-function</artifactId>
-      <version>1.5.0</version>
+      <version>1.5.1</version>
     </dependency>
     <dependency>
       <groupId>org.junit.jupiter</groupId>
